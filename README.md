@@ -1,5 +1,3 @@
-# Rkmeans
-
 **Rkmeans** is an interactive Shiny application for structural clustering of molecular files (`.cif` or `.pdb`) based on RMSD and k-means clustering.
 
 ## 🚀 Features
