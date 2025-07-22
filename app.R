@@ -5,6 +5,8 @@ library(plotly)
 library(shinybusy)
 library(r3dmol)
 
+python_exec <- "C:/Users/HP/AppData/Local/Programs/Python/Python313/python.exe"
+
 ui <- fluidPage(
   add_busy_spinner(spin = "fading-circle"),
   
@@ -19,7 +21,8 @@ ui <- fluidPage(
       checkboxInput("use3D", "3D MDS Plot", FALSE),
       actionButton("run", "Run Clustering"),
       downloadButton("downloadData", "Download Cluster Representatives (.zip)"),
-      downloadButton("downloadTable", "Download Cluster Summary (.csv)")
+      downloadButton("downloadTable", "Download Cluster Summary (.csv)"),
+      uiOutput("selectClusterUI")
     ),
     
     mainPanel(
@@ -94,6 +97,8 @@ server <- function(input, output, session) {
       results$rmsd_mat <- rmsd_mat
       results$paths <- paths
       results$rep_files <- rep_files
+      rep_files_pdb <- convert_cif_to_pdb_biopython(rep_files, output_dir = file.path(tmpdir, "pdbs"), python_exec = python_exec)
+      results$rep_files_pdb <- rep_files_pdb
       
       stats <- lapply(1:k, function(cluster_id) {
         inds <- which(km$cluster == cluster_id)
@@ -160,13 +165,49 @@ server <- function(input, output, session) {
     }
   )
   
-  output$structureViewer <- renderR3dmol({
+  output$selectClusterUI <- renderUI({
     req(results$rep_files)
+    selectInput("selectedCluster", "Select Cluster to View:", 
+                choices = paste0("Cluster ", seq_along(results$rep_files)), 
+                selected = "Cluster 1")
+  })
+  
+  # function for cif to pdb convertion as r3dmol not recognize alphafold .cif files
+  convert_cif_to_pdb_biopython <- function(cif_files, output_dir = "converted_pdbs", python_exec = "python") {
+    python_script <- normalizePath("cif_to_pdb.py")  # Asegura que sea ruta absoluta
+    output_dir <- normalizePath(output_dir, mustWork = FALSE)
+    
+    if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+    
+    pdb_files <- character(length(cif_files))
+    
+    for (i in seq_along(cif_files)) {
+      cif <- normalizePath(cif_files[i])
+      pdb_name <- sub("\\.cif$", ".pdb", basename(cif), ignore.case = TRUE)
+      pdb_path <- normalizePath(file.path(output_dir, pdb_name), mustWork = FALSE)
+      
+      cmd <- sprintf('"%s" "%s" "%s" "%s"', python_exec, python_script, cif, pdb_path)
+      message("[CMD] ", cmd)
+      system(cmd)
+      
+      pdb_files[i] <- pdb_path
+    }
+    
+    return(pdb_files)
+  }
+
+  output$structureViewer <- renderR3dmol({
+    req(input$selectedCluster, results$rep_files_pdb)
+    
+    cluster_num <- as.integer(gsub("Cluster ", "", input$selectedCluster))
+    file_path <- results$rep_files_pdb[[cluster_num]]
+    
     r3dmol() %>%
-      m_add_model(data = readChar(results$rep_files[[1]], file.info(results$rep_files[[1]])$size), format = "cif") %>%
+      m_add_model(data = readChar(file_path, file.info(file_path)$size), format = "pdb") %>%
       m_set_style(style = m_style_cartoon()) %>%
       m_zoom_to()
   })
+  
 }
 
 shinyApp(ui, server)
