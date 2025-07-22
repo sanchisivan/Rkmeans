@@ -5,8 +5,6 @@ library(plotly)
 library(shinybusy)
 library(r3dmol)
 
-python_exec <- "C:/Users/HP/AppData/Local/Programs/Python/Python313/python.exe"
-
 ui <- fluidPage(
   add_busy_spinner(spin = "fading-circle"),
   
@@ -97,7 +95,12 @@ server <- function(input, output, session) {
       results$rmsd_mat <- rmsd_mat
       results$paths <- paths
       results$rep_files <- rep_files
-      rep_files_pdb <- convert_cif_to_pdb_biopython(rep_files, output_dir = file.path(tmpdir, "pdbs"), python_exec = python_exec)
+      
+      rep_files_pdb <- convert_cif_to_pdb_biopython(
+        rep_files,
+        output_dir = file.path(tmpdir, "pdbs")
+      )
+      
       results$rep_files_pdb <- rep_files_pdb
       
       stats <- lapply(1:k, function(cluster_id) {
@@ -173,10 +176,26 @@ server <- function(input, output, session) {
   })
   
   # function for cif to pdb convertion as r3dmol not recognize alphafold .cif files
-  convert_cif_to_pdb_biopython <- function(cif_files, output_dir = "converted_pdbs", python_exec = "python") {
-    python_script <- normalizePath("cif_to_pdb.py")  # Asegura que sea ruta absoluta
-    output_dir <- normalizePath(output_dir, mustWork = FALSE)
+  
+  
+  check_python <- function() {
+    result <- suppressWarnings(system("python --version", intern = TRUE, ignore.stderr = TRUE))
+    if (length(result) == 0) {
+      stop("Python not found. Please install Python and ensure it's added to your system PATH.")
+    }
+  }
+  
+  convert_cif_to_pdb_biopython <- function(cif_files, output_dir = "converted_pdbs", python_exec = NULL) {
     
+    if (is.null(python_exec)) {
+      python_exec <- Sys.which("python")
+      if (python_exec == "") {
+        stop("❌ Python no encontrado. Asegúrate de tener Python instalado y en el PATH.")
+      }
+    }
+    
+    python_script <- normalizePath("cif_to_pdb.py", mustWork = TRUE)
+    output_dir <- normalizePath(output_dir, mustWork = FALSE)
     if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
     
     pdb_files <- character(length(cif_files))
@@ -195,7 +214,9 @@ server <- function(input, output, session) {
     
     return(pdb_files)
   }
-
+  
+  
+  
   output$structureViewer <- renderR3dmol({
     req(input$selectedCluster, results$rep_files_pdb)
     
