@@ -15,7 +15,7 @@ ui <- fluidPage(
       fileInput("files", "Upload .cif or .pdb files", multiple = TRUE,
                 accept = c(".cif", ".pdb")),
       sliderInput("k", "Number of clusters (k)", min = 2, max = 10, value = 3),
-      checkboxInput("showLabels", "Show labels in MDS plot", FALSE),
+      #checkboxInput("showLabels", "Show labels in MDS plot", FALSE),
       checkboxInput("use3D", "3D MDS Plot", FALSE),
       actionButton("run", "Run Clustering"),
       downloadButton("downloadData", "Download Cluster Representatives (.zip)"),
@@ -25,7 +25,7 @@ ui <- fluidPage(
     
     mainPanel(
       tabsetPanel(
-        tabPanel("MDS Plot", plotlyOutput("mdsPlot")),
+        tabPanel("MDS Plot", plotlyOutput("mdsPlot", height = "600px")),
         tabPanel("Cluster Summary", tableOutput("clusterTable")),
         tabPanel("Cluster Sizes", plotOutput("barPlot")),
         tabPanel("3D Structure Viewer", r3dmolOutput("structureViewer", height = "600px")),
@@ -49,8 +49,7 @@ server <- function(input, output, session) {
   observeEvent(input$run, {
     req(input$files)
     files <- input$files
-    paths <- files$datapath
-    names(paths) <- files$name
+    paths <- setNames(files$datapath, files$name)
     
     structs <- lapply(paths, function(p) {
       ext <- tools::file_ext(p)
@@ -94,7 +93,7 @@ server <- function(input, output, session) {
         medoid_idx <- inds[which.min(colMeans(submat))]
         rep_name <- paste0("cluster_", cluster_id, "_rep.cif")
         rep_path <- file.path(tmpdir, rep_name)
-        file.copy(paths[medoid_idx], rep_path, overwrite = TRUE)
+        file.copy(paths[[medoid_idx]], rep_path, overwrite = TRUE)
         rep_files[cluster_id] <- rep_path
       }
       incProgress(0.2)
@@ -103,10 +102,10 @@ server <- function(input, output, session) {
       results$km <- km
       results$rmsd_mat <- rmsd_mat
       results$paths <- paths
-      results$rep_files <- rep_files
+      results$rep_files <- setNames(rep_files, names(rep_files))
       
       rep_files_pdb <- convert_structure_with_biopython(
-        rep_files,
+        setNames(rep_files, basename(rep_files)),
         output_dir = file.path(tmpdir, "pdbs")
       )
       
@@ -138,11 +137,11 @@ server <- function(input, output, session) {
     df <- results$mds_df
     if (input$use3D) {
       plot_ly(df, x = ~X, y = ~Y, z = ~Z, color = ~Cluster, colors = "Set1",
-              type = 'scatter3d', mode = if (input$showLabels) 'markers+text' else 'markers',
+              type = 'scatter3d', #mode = if (input$showLabels) 'markers+text' else 'markers',
               text = ~File)
     } else {
       plot_ly(df, x = ~X, y = ~Y, color = ~Cluster, colors = "Set1",
-              type = 'scatter', mode = if (input$showLabels) 'markers+text' else 'markers',
+              type = 'scatter', #mode = if (input$showLabels) 'markers+text' else 'markers',
               text = ~File)
     }
   })
@@ -184,9 +183,6 @@ server <- function(input, output, session) {
                 selected = "Cluster 1")
   })
   
-  # function for cif to pdb convertion as r3dmol not recognize alphafold .cif files
-  
-  
   check_python <- function() {
     result <- suppressWarnings(system("python --version", intern = TRUE, ignore.stderr = TRUE))
     if (length(result) == 0) {
@@ -194,7 +190,8 @@ server <- function(input, output, session) {
     }
   }
   
-  convert_structure_with_biopython <- function(input_files, direction = "cif2pdb", output_dir = "converted", python_exec = NULL) {
+  convert_structure_with_biopython <- function(input_files, direction = "cif2pdb", output_dir = "converted", 
+                                               python_exec = NULL) {
     if (is.null(python_exec)) {
       python_exec <- Sys.which("python")
       if (python_exec == "") {
@@ -213,11 +210,11 @@ server <- function(input, output, session) {
     out_files <- character(length(input_files))
     
     for (i in seq_along(input_files)) {
-      input <- normalizePath(input_files[i])
-      output_name <- switch(direction,
-                            cif2pdb = sub("\\.cif$", ".pdb", basename(input), ignore.case = TRUE),
-                            pdb2cif = sub("\\.pdb$", ".cif", basename(input), ignore.case = TRUE))
-      output_path <- file.path(output_dir, output_name)
+      input <- normalizePath(input_files[[i]], mustWork = TRUE)
+      original_name <- names(input_files)[i]
+      base <- tools::file_path_sans_ext(basename(original_name))
+      output_ext <- ifelse(direction == "cif2pdb", ".pdb", ".cif")
+      output_path <- file.path(output_dir, paste0(base, output_ext))
       
       cmd <- sprintf('"%s" "%s" "%s" "%s"', python_exec, script_path, input, output_path)
       message("[CMD] ", cmd)
@@ -228,7 +225,6 @@ server <- function(input, output, session) {
     
     return(out_files)
   }
-  
   
   output$structureViewer <- renderR3dmol({
     req(input$selectedCluster, results$rep_files_pdb)
@@ -241,8 +237,6 @@ server <- function(input, output, session) {
       m_set_style(style = m_style_cartoon()) %>%
       m_zoom_to()
   })
-  
-  # file converter
   
   converted_files <- reactiveVal(NULL)
   
@@ -283,4 +277,3 @@ server <- function(input, output, session) {
 } # close server
 
 shinyApp(ui, server)
-
