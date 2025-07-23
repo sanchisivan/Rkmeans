@@ -1,72 +1,81 @@
-**Rkmeans** is an interactive Shiny application for structural clustering of molecular files (`.cif` or `.pdb`) based on RMSD and k-means clustering.
+# Rkmeans
 
-This app was born from the need to cluster AlphaFold 3 output structures. At the time, no simple and direct online tool allowed the structural clustering of `.cif` files. **Rkmeans** provides an intuitive and local interface to process and visualize clusters of predicted structures.
+**Rkmeans** is a small interactive R/Shiny application for structural clustering of molecular files (`.cif` or `.pdb`) based on RMSD and k-means clustering.
 
-## 🚀 Features
+This app was born from the need to cluster AlphaFold 3 output structures, especially for R users. At the time, no simple and direct online tool allowed the structural clustering of `.cif` files. **Rkmeans** provides an intuitive and local interface to process and visualize clusters of predicted structures.
 
-- Upload multiple `.cif` or `.pdb` files
-- Compute pairwise RMSD between structures
-- Perform multidimensional scaling (MDS)
-- Cluster structures using k-means
-- Visualize clusters in interactive 2D or 3D MDS plots (Plotly)
-- View and select representative structures for each cluster
-- Convert `.cif` representative structures to `.pdb` format (for visualization compatibility)
-- Visualize selected structures in 3D (r3dmol)
-- Download representative structures (medoids) for each cluster
-- Download summary statistics (cluster size, RMSD dispersion, centroid distances)
+---
 
-## 🧪 Requirements
+## Features
 
-- R ≥ 4.1
-- R packages: `shiny`, `plotly`, `bio3d`, `ggplot2`, `r3dmol`, `shinybusy`
-- Python ≥ 3.8
-- Python packages: `biopython`
+- Load multiple `.pdb` or `.cif` files from a folder.
+- Automatically convert AlphaFold `.cif` files to `.pdb` (via Python and Biopython).
+- Calculate pairwise RMSD using alpha carbons (Cα).
+- Run multidimensional scaling (MDS) and k-means clustering.
+- Visualize 3D structures with `r3dmol` directly in the app.
+- Show cluster details (size, representative structure).
+- Save cluster representatives
 
-### Installing R packages
+---
+
+## Requirements
+
+### R packages
+
+Install these packages if you don’t have them already:
 
 ```r
-install.packages(c("shiny", "plotly", "ggplot2", "shinybusy"))
-# For bio3d
-if (!requireNamespace("bio3d", quietly = TRUE)) {
-  install.packages("bio3d", repos = "http://bio3d.colorado.edu/CRAN/")
-}
-# For r3dmol
-if (!requireNamespace("r3dmol", quietly = TRUE)) {
-  install.packages("r3dmol")
-}
+install.packages(c(
+  "shiny", "shinyFiles", "bio3d", "r3dmol", "tools"
+))
 ```
 
-### Installing Python and Biopython (Windows)
+### (Optional) Python + Biopython
 
-1. Download Python from: https://www.python.org/downloads/windows/
-2. During installation, check **"Add Python to PATH"**.
-3. Open a terminal (cmd) and install Biopython:
+If you want to use the **3D structure viewer** with `.cif` files (especially those downloaded from AlphaFold), you'll need Python and Biopython installed. This is only required for visualization — **not for clustering**.
 
 ```bash
 pip install biopython
 ```
 
-## ⚠️ Important
-
-In the file `app.R`, update the following line with the correct path to your Python executable (only required if not added to PATH):
+Make sure Python is installed and accessible from R via:
 
 ```r
-python_exec <- "C:/path/to/python.exe"
+Sys.which("python")
 ```
 
-If Python is in your system PATH, you can simplify this to just `"python"`.
+If you're only interested in the clustering results and don't need structure visualization, you can skip this step.
 
-## 💥 Running the App
+## How to Use
 
-From R or RStudio:
+1. Clone this repository or download the app files.
+2. Place your `.cif` or `.pdb` files in a folder (e.g., `structures/`).
+3. Launch the app in R:
 
 ```r
-shiny::runApp()
+shiny::runApp("path_to_app_folder")
 ```
 
-Or clone the repository and open `app.R`.
+4. In the app:
+   - Select a folder containing `.cif` or `.pdb` files.
+   - The app will align the structures, calculate the RMSD matrix, and perform **k-means clustering**.
+   - You can choose the number of clusters (`k`) manually.
+   - Once clustering is complete, you'll see:
+     - A **summary table** showing cluster sizes, within-cluster RMSD, and medoid filenames.
+     - A **3D scatter plot** of the structures in reduced dimensions (via MDS).
+     - Optional **3D viewer** for inspecting any selected structure.
 
-## 📄 License
+---
+
+## Just a Simple App
+
+This is not a polished piece of software — just a tool I made for myself to cluster structural models. Sharing it here in case it helps others using R for protein analysis.
+
+Feel free to fork, modify, and improve!
+
+---
+
+## License
 
 MIT License.
 
