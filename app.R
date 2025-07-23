@@ -28,7 +28,16 @@ ui <- fluidPage(
         tabPanel("MDS Plot", plotlyOutput("mdsPlot")),
         tabPanel("Cluster Summary", tableOutput("clusterTable")),
         tabPanel("Cluster Sizes", plotOutput("barPlot")),
-        tabPanel("3D Structure Viewer", r3dmolOutput("structureViewer", height = "600px"))
+        tabPanel("3D Structure Viewer", r3dmolOutput("structureViewer", height = "600px")),
+        tabPanel("Cif/Pdb Converter",
+                 fileInput("convert_files", "Upload .cif or .pdb files", multiple = TRUE,
+                           accept = c(".cif", ".pdb")),
+                 radioButtons("convert_direction", "Conversion Direction:",
+                              choices = c("cif → pdb" = "cif2pdb", "pdb → cif" = "pdb2cif")),
+                 actionButton("convert_button", "Convert"),
+                 uiOutput("converted_files_ui"),
+                 downloadButton("downloadConverted", "Download Converted Files (.zip)")
+        )
       )
     )
   )
@@ -96,7 +105,7 @@ server <- function(input, output, session) {
       results$paths <- paths
       results$rep_files <- rep_files
       
-      rep_files_pdb <- convert_cif_to_pdb_biopython(
+      rep_files_pdb <- convert_structure_with_biopython(
         rep_files,
         output_dir = file.path(tmpdir, "pdbs")
       )
@@ -185,36 +194,40 @@ server <- function(input, output, session) {
     }
   }
   
-  convert_cif_to_pdb_biopython <- function(cif_files, output_dir = "converted_pdbs", python_exec = NULL) {
-    
+  convert_structure_with_biopython <- function(input_files, direction = "cif2pdb", output_dir = "converted", python_exec = NULL) {
     if (is.null(python_exec)) {
       python_exec <- Sys.which("python")
       if (python_exec == "") {
-        stop("❌ Python no encontrado. Asegúrate de tener Python instalado y en el PATH.")
+        stop("❌ Python not found. Please ensure it's installed and in your PATH.")
       }
     }
     
-    python_script <- normalizePath("cif_to_pdb.py", mustWork = TRUE)
+    script_path <- switch(direction,
+                          cif2pdb = normalizePath("cif_to_pdb.py", mustWork = TRUE),
+                          pdb2cif = normalizePath("pdb_to_cif.py", mustWork = TRUE),
+                          stop("Invalid direction."))
+    
     output_dir <- normalizePath(output_dir, mustWork = FALSE)
     if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
     
-    pdb_files <- character(length(cif_files))
+    out_files <- character(length(input_files))
     
-    for (i in seq_along(cif_files)) {
-      cif <- normalizePath(cif_files[i])
-      pdb_name <- sub("\\.cif$", ".pdb", basename(cif), ignore.case = TRUE)
-      pdb_path <- normalizePath(file.path(output_dir, pdb_name), mustWork = FALSE)
+    for (i in seq_along(input_files)) {
+      input <- normalizePath(input_files[i])
+      output_name <- switch(direction,
+                            cif2pdb = sub("\\.cif$", ".pdb", basename(input), ignore.case = TRUE),
+                            pdb2cif = sub("\\.pdb$", ".cif", basename(input), ignore.case = TRUE))
+      output_path <- file.path(output_dir, output_name)
       
-      cmd <- sprintf('"%s" "%s" "%s" "%s"', python_exec, python_script, cif, pdb_path)
+      cmd <- sprintf('"%s" "%s" "%s" "%s"', python_exec, script_path, input, output_path)
       message("[CMD] ", cmd)
       system(cmd)
       
-      pdb_files[i] <- pdb_path
+      out_files[i] <- output_path
     }
     
-    return(pdb_files)
+    return(out_files)
   }
-  
   
   
   output$structureViewer <- renderR3dmol({
@@ -229,7 +242,45 @@ server <- function(input, output, session) {
       m_zoom_to()
   })
   
-}
+  # file converter
+  
+  converted_files <- reactiveVal(NULL)
+  
+  observeEvent(input$convert_button, {
+    req(input$convert_files)
+    files <- input$convert_files
+    paths <- files$datapath
+    names(paths) <- files$name
+    
+    dir_out <- file.path(tempdir(), "converted_files")
+    if (!dir.exists(dir_out)) dir.create(dir_out, recursive = TRUE)
+    
+    converted_paths <- switch(
+      input$convert_direction,
+      cif2pdb = convert_structure_with_biopython(paths, direction = "cif2pdb", output_dir = dir_out),
+      pdb2cif = convert_structure_with_biopython(paths, direction = "pdb2cif", output_dir = dir_out)
+    )
+    converted_files(converted_paths)
+  })
+  
+  output$converted_files_ui <- renderUI({
+    req(converted_files())
+    tags$ul(lapply(converted_files(), function(path) {
+      tags$li(basename(path))
+    }))
+  })
+  
+  output$downloadConverted <- downloadHandler(
+    filename = function() {
+      paste0("converted_files_", Sys.Date(), ".zip")
+    },
+    content = function(file) {
+      req(converted_files())
+      zip::zip(zipfile = file, files = converted_files(), mode = "cherry-pick")
+    }
+  )
+  
+} # close server
 
 shinyApp(ui, server)
 
