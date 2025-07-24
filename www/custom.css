@@ -1,0 +1,70 @@
+/* == GENERAL == */
+body {
+  background-color: #ffffff;
+  font-family: 'Roboto', sans-serif;
+  color: #2c3e50;
+}
+
+/* == HEADINGS == */
+h1, h2, h3 {
+  color: #0275d8; /* Match title */
+  font-family: 'Rubik', sans-serif;
+}
+
+/* == FILE INPUT STYLING == */
+input[type="file"] {
+  background-color: #ffffff;
+  border: 1px solid #ccc;
+  padding: 6px;
+  border-radius: 4px;
+  width: 100%;
+}
+
+/* == SLIDER STYLING == */
+.irs-bar,
+.irs-bar-edge,
+.irs-line,
+.irs-slider {
+  background: #0275d8 !important;
+  border-color: #0275d8 !important;
+}
+
+/* == PRIMARY BUTTONS == */
+.btn-primary, #run, #convert_button {
+  background-color: #0275d8 !important;
+  color: white !important;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  padding: 8px 16px;
+}
+
+.btn-primary:hover, #run:hover, #convert_button:hover {
+  background-color: #025aa5 !important;
+}
+
+/* == CHECKBOX == */
+input[type="checkbox"] {
+  accent-color: #0275d8;
+}
+
+/* == NAV TABS == */
+.nav-tabs > li > a {
+  color: #0275d8;
+  font-weight: 500;
+}
+
+.nav-tabs > li.active > a {
+  color: white !important;
+  background-color: #0275d8 !important;
+  border: 1px solid #ccc;
+}
+
+/* == TITLE OVERRIDE == */
+#app_title {
+  color: #0275d8;
+  font-size: 26px;
+  font-weight: bold;
+}
+
+

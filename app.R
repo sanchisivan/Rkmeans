@@ -4,23 +4,49 @@ library(ggplot2)
 library(plotly)
 library(shinybusy)
 library(r3dmol)
+library(bslib)
+library(shinydashboard)
+
+source("theme.R")  # Cargá tu tema
 
 ui <- fluidPage(
+  theme = my_theme,
   add_busy_spinner(spin = "fading-circle"),
   
-  titlePanel("Structural k-means clustering (.cif / .pdb files)"),
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+  ),
+  
+  tags$div(
+    style = "padding: 10px 20px;",
+    tags$h1("Rkmeans", style = "margin-bottom: 5px; font-weight: bold; color: black;"),
+    tags$h4("Structural k-means clustering (.cif / .pdb files)", style = "margin-top: 0; color: #555555;")
+  ),
   
   sidebarLayout(
     sidebarPanel(
       fileInput("files", "Upload .cif or .pdb files", multiple = TRUE,
                 accept = c(".cif", ".pdb")),
       sliderInput("k", "Number of clusters (k)", min = 2, max = 10, value = 3),
-      #checkboxInput("showLabels", "Show labels in MDS plot", FALSE),
       checkboxInput("use3D", "3D MDS Plot", FALSE),
-      actionButton("run", "Run Clustering"),
-      downloadButton("downloadData", "Download Cluster Representatives (.zip)"),
-      downloadButton("downloadTable", "Download Cluster Summary (.csv)"),
-      uiOutput("selectClusterUI")
+      div(
+        style = "margin-bottom: 15px;",
+        actionButton("run", "Run Clustering", class = "btn-primary")
+      ),
+      
+      div(
+        style = "margin-bottom: 15px;",
+        downloadButton("downloadData", "Download Cluster Representatives (.zip)")
+      ),
+      
+      div(
+        style = "margin-bottom: 15px;",
+        downloadButton("downloadTable", "Download Cluster Summary (.csv)")
+      ),
+      div(
+        style = "margin-bottom: 15px;",
+        uiOutput("selectClusterUI")
+      )
     ),
     
     mainPanel(
@@ -34,14 +60,15 @@ ui <- fluidPage(
                            accept = c(".cif", ".pdb")),
                  radioButtons("convert_direction", "Conversion Direction:",
                               choices = c("cif → pdb" = "cif2pdb", "pdb → cif" = "pdb2cif")),
-                 actionButton("convert_button", "Convert"),
+                 actionButton("convert_button", "Convert", class = "btn btn-success"),
                  uiOutput("converted_files_ui"),
-                 downloadButton("downloadConverted", "Download Converted Files (.zip)")
+                 downloadButton("downloadConverted", "Download Converted Files (.zip)", class = "btn btn-success")
         )
       )
     )
   )
 )
+
 
 server <- function(input, output, session) {
   results <- reactiveValues()

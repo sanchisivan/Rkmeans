@@ -2,7 +2,7 @@
 
 **Rkmeans** is a small interactive R/Shiny application for structural clustering of molecular files (`.cif` or `.pdb`) based on RMSD and k-means clustering.
 
-This app was born from the need to cluster AlphaFold 3 output structures, especially for R users. At the time, no simple and direct online tool allowed the structural clustering of `.cif` files. **Rkmeans** provides an intuitive and local interface to process and visualize clusters of predicted structures. It also includes a converter to transform .cif files into .pdb format (and vice versa).
+This app was born from the need to cluster AlphaFold 3 output structures, especially for R users. At the time, no simple and direct online tool allowed the structural clustering of `.cif` files. It also includes a converter to transform .cif files into .pdb format (and vice versa).
 
 ---
 
