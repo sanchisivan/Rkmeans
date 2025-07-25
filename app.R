@@ -6,10 +6,12 @@ library(shinybusy)
 library(r3dmol)
 library(bslib)
 library(shinydashboard)
+library(waiter)
 
 source("theme.R")  # Cargá tu tema
 
 ui <- fluidPage(
+  use_waiter(),
   theme = my_theme,
   add_busy_spinner(spin = "fading-circle"),
   
@@ -53,16 +55,37 @@ ui <- fluidPage(
       tabsetPanel(
         tabPanel("MDS Plot", plotlyOutput("mdsPlot", height = "600px")),
         tabPanel("Cluster Summary", tableOutput("clusterTable")),
-        tabPanel("Cluster Sizes", plotOutput("barPlot")),
+        tabPanel("Cluster Sizes", plotlyOutput("barPlot")),
         tabPanel("3D Structure Viewer", r3dmolOutput("structureViewer", height = "600px")),
         tabPanel("Cif/Pdb Converter",
-                 fileInput("convert_files", "Upload .cif or .pdb files", multiple = TRUE,
-                           accept = c(".cif", ".pdb")),
-                 radioButtons("convert_direction", "Conversion Direction:",
-                              choices = c("cif → pdb" = "cif2pdb", "pdb → cif" = "pdb2cif")),
-                 actionButton("convert_button", "Convert", class = "btn btn-success"),
-                 uiOutput("converted_files_ui"),
-                 downloadButton("downloadConverted", "Download Converted Files (.zip)", class = "btn btn-success")
+                 tags$div(style = "padding: 20px; max-width: 600px;",
+                          tags$h6("Upload Files for Conversion"),
+                          fileInput("convert_files", NULL, 
+                                    buttonLabel = "Browse...", 
+                                    placeholder = "No file selected",
+                                    multiple = TRUE,
+                                    accept = c(".cif", ".pdb")),
+                          
+                          tags$div(style = "margin-top: 20px; margin-bottom: 10px;",
+                                   tags$label("Conversion Direction:", style = "font-weight: 500; color: #2c3e50;"),
+                                   radioButtons("convert_direction", NULL,
+                                                choices = c("CIF → PDB" = "cif2pdb", "PDB → CIF" = "pdb2cif"),
+                                                inline = TRUE
+                                   )
+                          ),
+                          
+                          div(
+                            style = "margin-top: 10px; margin-bottom: 20px;",
+                            actionButton("convert_button", "Convert Files", class = "btn btn-primary")
+                          ),
+                          
+                          uiOutput("converted_files_ui"),
+                          
+                          div(
+                            style = "margin-top: 20px;",
+                            downloadButton("downloadConverted", "Download Converted Files (.zip)", class = "btn btn-primary")
+                          )
+                 )
         )
       )
     )
@@ -75,6 +98,17 @@ server <- function(input, output, session) {
   
   observeEvent(input$run, {
     req(input$files)
+    
+    # waiter
+    waiter_show(html = tagList(
+      spin_fading_circles(), 
+      tags$br(),
+      tags$h4("Processing and clustering...", style = "color: #333;")
+    ), color = "#ffffffcc")
+    
+    on.exit(waiter_hide(), add = TRUE)
+    #
+    
     files <- input$files
     paths <- setNames(files$datapath, files$name)
     
@@ -162,27 +196,86 @@ server <- function(input, output, session) {
   output$mdsPlot <- renderPlotly({
     req(results$mds_df)
     df <- results$mds_df
+    
+    marker_style <- list(
+      size = 10,                 
+      opacity = 0.7
+    )
+    
     if (input$use3D) {
-      plot_ly(df, x = ~X, y = ~Y, z = ~Z, color = ~Cluster, colors = "Set1",
-              type = 'scatter3d', #mode = if (input$showLabels) 'markers+text' else 'markers',
-              text = ~File)
+      plot_ly(
+        df,
+        x = ~X, y = ~Y, z = ~Z,
+        color = ~Cluster,
+        type = 'scatter3d',
+        mode = 'markers',
+        text = ~File,
+        marker = marker_style
+      ) %>%
+        layout(
+          legend = list(title = list(text = "Cluster"))
+        )
+      
     } else {
-      plot_ly(df, x = ~X, y = ~Y, color = ~Cluster, colors = "Set1",
-              type = 'scatter', #mode = if (input$showLabels) 'markers+text' else 'markers',
-              text = ~File)
+      plot_ly(
+        df,
+        x = ~X, y = ~Y,
+        color = ~Cluster,
+        type = 'scatter',
+        mode = 'markers',
+        text = ~File,
+        marker = marker_style
+      ) %>%
+        layout(
+          legend = list(title = list(text = "Cluster"))
+        )
     }
   })
   
-  output$barPlot <- renderPlot({
+  
+  output$barPlot <- renderPlotly({
     req(results$km)
-    barplot(
-      table(results$km$cluster),
-      main = "Number of Structures per Cluster",
-      xlab = "Cluster",
-      ylab = "Count",
-      col = rainbow(input$k)
+    
+    df <- data.frame(Cluster = factor(results$km$cluster)) %>%
+      count(Cluster)
+    
+    cluster_colors <- c(
+      "#A8D5BA", "#79B7A4", "#5D9B9B", "#4F7E87",
+      "#3B6072", "#2F4858", "#A4CBB1", "#8FC1A9", "#C1E1C1", "#6BA292"
     )
+    
+    plot_ly(
+      data = df,
+      x = ~Cluster,
+      y = ~n,
+      type = 'bar',
+      textposition = 'auto',
+      marker = list(
+        color = cluster_colors[seq_along(df$Cluster)]
+      )
+    ) %>%
+      layout(
+        title = list(
+          text = "Number of Structures per Cluster",
+          font = list(size = 20, color = "#2c3e50")
+        ),
+        xaxis = list(
+          title = "Cluster",
+          tickfont = list(size = 14, color = "#2c3e50"),
+          titlefont = list(size = 16, color = "#2c3e50")
+        ),
+        yaxis = list(
+          title = "Count",
+          tickfont = list(size = 14, color = "#2c3e50"),
+          titlefont = list(size = 16, color = "#2c3e50")
+        ),
+        plot_bgcolor = "#ffffff",
+        paper_bgcolor = "#ffffff",
+        margin = list(l = 60, r = 30, b = 60, t = 70)
+      )
   })
+  
+  
   
   output$clusterTable <- renderTable({
     req(results$stats)

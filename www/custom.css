@@ -1,70 +1,77 @@
-/* == GENERAL == */
 body {
   background-color: #ffffff;
   font-family: 'Roboto', sans-serif;
   color: #2c3e50;
 }
 
-/* == HEADINGS == */
-h1, h2, h3 {
-  color: #0275d8; /* Match title */
+h1, h2, h3, h4 {
+  color: #2c3e50;
   font-family: 'Rubik', sans-serif;
 }
 
-/* == FILE INPUT STYLING == */
+#run, #convert_button {
+  background-color: #A8D5BA !important;
+  color: #2c3e50 !important;
+  border: none;
+  font-weight: bold;
+  border-radius: 6px;
+  padding: 8px 16px;
+}
+
+#run:hover, #convert_button:hover {
+  background-color: #91c8a8 !important;
+  color: #1a1a1a !important;
+}
+
+.btn, .btn-default {
+  background-color: #e7e7e7 !important;
+  color: #333 !important;
+  border: 1px solid #ccc !important;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
 input[type="file"] {
-  background-color: #ffffff;
-  border: 1px solid #ccc;
+  background-color: #ffffff !important;
+  border: 1px solid #cccccc !important;
   padding: 6px;
   border-radius: 4px;
   width: 100%;
 }
 
-/* == SLIDER STYLING == */
-.irs-bar,
-.irs-bar-edge,
-.irs-line,
-.irs-slider {
-  background: #0275d8 !important;
-  border-color: #0275d8 !important;
+.shiny-input-container .js-range-slider {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 6px;
 }
 
-/* == PRIMARY BUTTONS == */
-.btn-primary, #run, #convert_button {
-  background-color: #0275d8 !important;
-  color: white !important;
-  border: none;
-  border-radius: 6px;
-  font-weight: bold;
-  padding: 8px 16px;
+.sidebar {
+  background-color: #f8f9fa;
 }
 
-.btn-primary:hover, #run:hover, #convert_button:hover {
-  background-color: #025aa5 !important;
-}
-
-/* == CHECKBOX == */
-input[type="checkbox"] {
-  accent-color: #0275d8;
-}
-
-/* == NAV TABS == */
-.nav-tabs > li > a {
-  color: #0275d8;
+.sidebar .sidebar-menu > li > a {
+  color: #2c3e50;
   font-weight: 500;
 }
 
-.nav-tabs > li.active > a {
-  color: white !important;
-  background-color: #0275d8 !important;
-  border: 1px solid #ccc;
+.sidebar .sidebar-menu > li.active > a {
+  background-color: #A8D5BA !important;
+  color: #2c3e50 !important;
 }
 
-/* == TITLE OVERRIDE == */
 #app_title {
-  color: #0275d8;
-  font-size: 26px;
+  color: #A8D5BA;
+  font-size: 24px;
   font-weight: bold;
+}
+
+#shinybusy-spinner {
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 9999;
+}
+
+#shinybusy-spinner .sk-fading-circle div {
+  background-color: #4682B4 !important; /* SteelBlue spinner color */
 }
 
 
