@@ -8,7 +8,7 @@ library(bslib)
 library(shinydashboard)
 library(waiter)
 
-source("theme.R")  # Cargá tu tema
+source("theme.R")
 
 ui <- fluidPage(
   use_waiter(),
@@ -53,8 +53,6 @@ ui <- fluidPage(
                   tabPanel("MDS Plot", plotlyOutput("mdsPlot", height = "600px")),
                   tabPanel("Cluster Summary", DT::dataTableOutput("clusterTable")),
                   tabPanel("Cluster Sizes", plotlyOutput("barPlot")),
-                  
-                  # 👇 Esta pestaña ahora tiene value = "viewer"
                   tabPanel(title = "3D Structure Viewer", value = "viewer",
                            r3dmolOutput("structureViewer", height = "600px")),
                   
@@ -282,7 +280,7 @@ server <- function(input, output, session) {
     req(results$stats)
     df <- results$stats
     
-    max_row <- which.max(df$Size)  # Find the row with the most populated cluster
+    max_row <- which.max(df$Size)  # Most populated cluster to highline
     
     DT::datatable(
       df,
