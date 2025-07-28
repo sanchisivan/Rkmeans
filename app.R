@@ -24,69 +24,70 @@ ui <- fluidPage(
     tags$h1("Rkmeans", style = "margin-bottom: 5px; font-weight: bold; color: black;"),
     tags$h4("Structural k-means clustering (.cif / .pdb files)", style = "margin-top: 0; color: #555555;")
   ),
-  
   sidebarLayout(
     sidebarPanel(
       fileInput("files", "Upload .cif or .pdb files", multiple = TRUE,
                 accept = c(".cif", ".pdb")),
       sliderInput("k", "Number of clusters (k)", min = 2, max = 10, value = 3),
       checkboxInput("use3D", "3D MDS Plot", FALSE),
-      div(
-        style = "margin-bottom: 15px;",
-        actionButton("run", "Run Clustering", class = "btn-primary")
-      ),
-      
-      div(
-        style = "margin-bottom: 15px;",
-        downloadButton("downloadData", "Download Cluster Representatives (.zip)")
-      ),
-      
-      div(
-        style = "margin-bottom: 15px;",
-        downloadButton("downloadTable", "Download Cluster Summary (.csv)")
-      ),
-      div(
-        style = "margin-bottom: 15px;",
-        uiOutput("selectClusterUI")
+      div(style = "margin-bottom: 15px;",
+          actionButton("run", "Run Clustering", class = "btn-primary")),
+      div(style = "margin-bottom: 15px;",
+          downloadButton("downloadData", "Download Cluster Representatives (.zip)")),
+      div(style = "margin-bottom: 15px;",
+          downloadButton("downloadTable", "Download Cluster Summary (.csv)")),
+      conditionalPanel(
+        condition = "input.tabset1 === 'viewer'",
+        tags$hr(),
+        tags$h5("Viewer Options"),
+        uiOutput("selectClusterUI"),
+        radioButtons("style", "Display Style:",
+                     choices = c("Cartoon", "Line", "Stick", "Sphere"),
+                     inline = TRUE),
+        colourpicker::colourInput("color", "Color:", value = "#A8D5BA")
       )
     ),
     
     mainPanel(
-      tabsetPanel(
-        tabPanel("MDS Plot", plotlyOutput("mdsPlot", height = "600px")),
-        tabPanel("Cluster Summary", tableOutput("clusterTable")),
-        tabPanel("Cluster Sizes", plotlyOutput("barPlot")),
-        tabPanel("3D Structure Viewer", r3dmolOutput("structureViewer", height = "600px")),
-        tabPanel("Cif/Pdb Converter",
-                 tags$div(style = "padding: 20px; max-width: 600px;",
-                          tags$h6("Upload Files for Conversion"),
-                          fileInput("convert_files", NULL, 
-                                    buttonLabel = "Browse...", 
-                                    placeholder = "No file selected",
-                                    multiple = TRUE,
-                                    accept = c(".cif", ".pdb")),
-                          
-                          tags$div(style = "margin-top: 20px; margin-bottom: 10px;",
-                                   tags$label("Conversion Direction:", style = "font-weight: 500; color: #2c3e50;"),
-                                   radioButtons("convert_direction", NULL,
-                                                choices = c("CIF → PDB" = "cif2pdb", "PDB → CIF" = "pdb2cif"),
-                                                inline = TRUE
-                                   )
-                          ),
-                          
-                          div(
-                            style = "margin-top: 10px; margin-bottom: 20px;",
-                            actionButton("convert_button", "Convert Files", class = "btn btn-primary")
-                          ),
-                          
-                          uiOutput("converted_files_ui"),
-                          
-                          div(
-                            style = "margin-top: 20px;",
-                            downloadButton("downloadConverted", "Download Converted Files (.zip)", class = "btn btn-primary")
-                          )
-                 )
-        )
+      tabsetPanel(id = "tabset1",
+                  tabPanel("MDS Plot", plotlyOutput("mdsPlot", height = "600px")),
+                  tabPanel("Cluster Summary", DT::dataTableOutput("clusterTable")),
+                  tabPanel("Cluster Sizes", plotlyOutput("barPlot")),
+                  
+                  # 👇 Esta pestaña ahora tiene value = "viewer"
+                  tabPanel(title = "3D Structure Viewer", value = "viewer",
+                           r3dmolOutput("structureViewer", height = "600px")),
+                  
+                  tabPanel("Cif/Pdb Converter",
+                           tags$div(style = "padding: 20px; max-width: 600px;",
+                                    tags$h6("Upload Files for Conversion"),
+                                    fileInput("convert_files", NULL, 
+                                              buttonLabel = "Browse...", 
+                                              placeholder = "No file selected",
+                                              multiple = TRUE,
+                                              accept = c(".cif", ".pdb")),
+                                    
+                                    tags$div(style = "margin-top: 20px; margin-bottom: 10px;",
+                                             tags$label("Conversion Direction:", style = "font-weight: 500; color: #2c3e50;"),
+                                             radioButtons("convert_direction", NULL,
+                                                          choices = c("CIF → PDB" = "cif2pdb", "PDB → CIF" = "pdb2cif"),
+                                                          inline = TRUE
+                                             )
+                                    ),
+                                    
+                                    div(
+                                      style = "margin-top: 10px; margin-bottom: 20px;",
+                                      actionButton("convert_button", "Convert Files", class = "btn btn-primary")
+                                    ),
+                                    
+                                    uiOutput("converted_files_ui"),
+                                    
+                                    div(
+                                      style = "margin-top: 20px;",
+                                      downloadButton("downloadConverted", "Download Converted Files (.zip)", class = "btn btn-primary")
+                                    )
+                           )
+                  )
       )
     )
   )
@@ -237,7 +238,7 @@ server <- function(input, output, session) {
     req(results$km)
     
     df <- data.frame(Cluster = factor(results$km$cluster)) %>%
-      count(Cluster)
+      dplyr::count(Cluster)
     
     cluster_colors <- c(
       "#A8D5BA", "#79B7A4", "#5D9B9B", "#4F7E87",
@@ -277,9 +278,30 @@ server <- function(input, output, session) {
   
   
   
-  output$clusterTable <- renderTable({
+  output$clusterTable <- DT::renderDataTable({
     req(results$stats)
-    results$stats
+    df <- results$stats
+    
+    max_row <- which.max(df$Size)  # Find the row with the most populated cluster
+    
+    DT::datatable(
+      df,
+      rownames = FALSE,
+      options = list(
+        pageLength = 10,
+        dom = 'tip',
+        ordering = TRUE,
+        columnDefs = list(list(className = 'dt-center', targets = "_all"))
+      ),
+      class = "compact stripe hover",
+      selection = "none"
+    ) %>%
+      DT::formatStyle(
+        'Size',
+        target = 'row',
+        backgroundColor = DT::styleEqual(df$Size[max_row], '#FFEFBA'),
+        fontWeight = DT::styleEqual(df$Size[max_row], 'bold')
+      )
   })
   
   output$downloadData <- downloadHandler(
@@ -352,11 +374,29 @@ server <- function(input, output, session) {
     cluster_num <- as.integer(gsub("Cluster ", "", input$selectedCluster))
     file_path <- results$rep_files_pdb[[cluster_num]]
     
-    r3dmol() %>%
-      m_add_model(data = readChar(file_path, file.info(file_path)$size), format = "pdb") %>%
-      m_set_style(style = m_style_cartoon()) %>%
-      m_zoom_to()
+    model_data <- readChar(file_path, file.info(file_path)$size)
+    
+    mol <- r3dmol() %>%
+      m_add_model(data = model_data, format = "pdb") %>%
+      m_set_style(style = switch(
+        input$style,
+        "Cartoon" = m_style_cartoon(color = input$color),
+        "Line"    = m_style_line(color = input$color),
+        "Stick"   = m_style_stick(color = input$color),
+        "Sphere"  = m_style_sphere(color = input$color)
+      ))
+    
+    if (isTRUE(input$showSurface)) {
+      mol <- mol %>% m_add_surface(style = m_surface_opacity(0.4))
+    }
+    
+    if (isTRUE(input$spin)) {
+      mol <- mol %>% m_spin(TRUE)
+    }
+    
+    mol %>% m_zoom_to()
   })
+  
   
   converted_files <- reactiveVal(NULL)
   
