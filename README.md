@@ -2,19 +2,19 @@
 
 **Rkmeans** is a small interactive R/Shiny application for structural clustering of molecular files (`.cif` or `.pdb`) based on RMSD and k-means clustering.
 
-This app was born from the need to cluster AlphaFold 3 output structures, especially for R users. At the time, no simple and direct online tool allowed the structural clustering of `.cif` files. It also includes a converter to transform .cif files into .pdb format (and vice versa).
+This app was born from the need to cluster AlphaFold 3 output structures, especially for R users. At the time, no simple and direct online tool allowed the structural clustering of `.cif` files. It also includes a converter to transform `.cif` files into `.pdb` format (and vice versa).
 
 ---
 
 ## Features
 
 - Load multiple `.pdb` or `.cif` files from a folder.
-- Automatically convert AlphaFold `.cif` files to `.pdb` (via Python and Biopython).
 - Calculate pairwise RMSD using alpha carbons (Cα).
 - Run multidimensional scaling (MDS) and k-means clustering.
 - Visualize 3D structures with `r3dmol` directly in the app.
 - Show cluster details (size, representative structure).
-- Save cluster representatives
+- Save cluster representatives.
+- `.cif` to `.pdb` file converter included.
 
 ---
 
@@ -26,7 +26,8 @@ Install these packages if you don’t have them already:
 
 ```r
 install.packages(c(
-  "shiny", "shinyFiles", "bio3d", "r3dmol", "tools"
+  "shiny", "shinyFiles", "bio3d", "r3dmol", "tools",
+  "dplyr", "ggplot2", "plotly", "DT"
 ))
 ```
 
@@ -45,6 +46,8 @@ Sys.which("python")
 ```
 
 If you're only interested in the clustering results and don't need structure visualization, you can skip this step.
+
+---
 
 ## How to Use
 
@@ -71,8 +74,6 @@ shiny::runApp("path_to_app_folder")
 
 This is not a polished piece of software — just a tool I made for myself to cluster structural models. Sharing it here in case it helps others using R for protein analysis.
 
-Feel free to fork, modify, and improve!
-
 ---
 
 ## License
@@ -83,7 +84,7 @@ MIT License.
 
 ## 👤 Author
 
-**Iván Sanchis, PhD**  
+**Ivan Sanchis, PhD**  
 Laboratorio de Péptidos Bioactivos  
 Facultad de Bioquímica y Ciencias Biológicas  
 Universidad Nacional del Litoral  
